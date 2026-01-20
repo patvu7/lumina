@@ -1996,26 +1996,43 @@ const Lumina = (function() {
     }
 
     function setupFullscreenEvents() {
-        document.getElementById('fullscreen-btn').addEventListener('click', () => fullscreen.enter());
-        document.getElementById('fullscreen-close').addEventListener('click', () => fullscreen.exit());
+        const fullscreenBtn = document.getElementById('fullscreen-btn');
+        const fullscreenClose = document.getElementById('fullscreen-close');
+        const fullscreenCardArea = document.getElementById('fullscreen-card-area');
+        const fsZoomIn = document.getElementById('fs-zoom-in');
+        const fsZoomOut = document.getElementById('fs-zoom-out');
+        
+        if (fullscreenBtn) {
+            fullscreenBtn.addEventListener('click', () => fullscreen.enter());
+        }
+        
+        if (fullscreenClose) {
+            fullscreenClose.addEventListener('click', () => fullscreen.exit());
+        }
         
         document.addEventListener('keydown', e => {
             if (e.key === 'Escape' && fullscreen.isActive) fullscreen.exit();
         });
         
-        document.getElementById('fullscreen-card-area').addEventListener('click', e => {
-            if (e.target.id === 'fullscreen-card-area') fullscreen.exit();
-        });
+        if (fullscreenCardArea) {
+            fullscreenCardArea.addEventListener('click', e => {
+                if (e.target.id === 'fullscreen-card-area') fullscreen.exit();
+            });
+        }
         
-        document.getElementById('fs-zoom-in').addEventListener('click', () => {
-            fullscreen.setZoom(fullscreen.fsState.zoom + 0.5, null, null, true);
-            utils.vibrate(5);
-        });
+        if (fsZoomIn) {
+            fsZoomIn.addEventListener('click', () => {
+                fullscreen.setZoom(fullscreen.fsState.zoom + 0.5, null, null, true);
+                utils.vibrate(5);
+            });
+        }
         
-        document.getElementById('fs-zoom-out').addEventListener('click', () => {
-            fullscreen.setZoom(fullscreen.fsState.zoom - 0.5, null, null, true);
-            utils.vibrate(5);
-        });
+        if (fsZoomOut) {
+            fsZoomOut.addEventListener('click', () => {
+                fullscreen.setZoom(fullscreen.fsState.zoom - 0.5, null, null, true);
+                utils.vibrate(5);
+            });
+        }
     }
 
     // Initialize on DOM ready

@@ -2668,15 +2668,25 @@ const Lumina = (function() {
     }
 
     function setupFullscreenEvents() {
+        const fullscreenBtn = document.getElementById('fullscreen-btn');
+        const fullscreenClose = document.getElementById('fullscreen-close');
+        const fullscreenCardArea = document.getElementById('fullscreen-card-area');
+        const fsZoomIn = document.getElementById('fs-zoom-in');
+        const fsZoomOut = document.getElementById('fs-zoom-out');
+        
         // Enter fullscreen
-        document.getElementById('fullscreen-btn').addEventListener('click', () => {
-            fullscreen.enter();
-        });
+        if (fullscreenBtn) {
+            fullscreenBtn.addEventListener('click', () => {
+                fullscreen.enter();
+            });
+        }
         
         // Exit fullscreen
-        document.getElementById('fullscreen-close').addEventListener('click', () => {
-            fullscreen.exit();
-        });
+        if (fullscreenClose) {
+            fullscreenClose.addEventListener('click', () => {
+                fullscreen.exit();
+            });
+        }
         
         // Escape key exits fullscreen
         document.addEventListener('keydown', e => {
@@ -2686,22 +2696,28 @@ const Lumina = (function() {
         });
         
         // Click outside card area exits fullscreen
-        document.getElementById('fullscreen-card-area').addEventListener('click', e => {
-            if (e.target.id === 'fullscreen-card-area') {
-                fullscreen.exit();
-            }
-        });
+        if (fullscreenCardArea) {
+            fullscreenCardArea.addEventListener('click', e => {
+                if (e.target.id === 'fullscreen-card-area') {
+                    fullscreen.exit();
+                }
+            });
+        }
         
         // Fullscreen zoom buttons
-        document.getElementById('fs-zoom-in').addEventListener('click', () => {
-            fullscreen.setZoom(fullscreen.fsState.zoom + 0.5, null, null, true);
-            utils.vibrate(5);
-        });
+        if (fsZoomIn) {
+            fsZoomIn.addEventListener('click', () => {
+                fullscreen.setZoom(fullscreen.fsState.zoom + 0.5, null, null, true);
+                utils.vibrate(5);
+            });
+        }
         
-        document.getElementById('fs-zoom-out').addEventListener('click', () => {
-            fullscreen.setZoom(fullscreen.fsState.zoom - 0.5, null, null, true);
-            utils.vibrate(5);
-        });
+        if (fsZoomOut) {
+            fsZoomOut.addEventListener('click', () => {
+                fullscreen.setZoom(fullscreen.fsState.zoom - 0.5, null, null, true);
+                utils.vibrate(5);
+            });
+        }
     }
 
     // Initialize on DOM ready
