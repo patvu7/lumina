@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#1a1a1a">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Lumina - Verified</title>
+    <title>Lumina - Recorded</title>
     <style>
 /* ============================================
    DESIGN TOKENS
@@ -166,7 +166,7 @@ html, body {
     position: relative;
 }
 
-/* Ambient glow effect behind the card */
+/* Ambient glow effect behind the card - gold tint for recorded state */
 .card-section::before {
     content: '';
     position: absolute;
@@ -177,9 +177,9 @@ html, body {
     height: 500px;
     background: radial-gradient(
         ellipse at center,
-        rgba(255, 255, 255, 0.08) 0%,
-        rgba(255, 255, 255, 0.04) 30%,
-        rgba(255, 255, 255, 0.01) 50%,
+        rgba(232, 184, 74, 0.12) 0%,
+        rgba(232, 184, 74, 0.06) 30%,
+        rgba(232, 184, 74, 0.02) 50%,
         transparent 70%
     );
     pointer-events: none;
@@ -201,14 +201,14 @@ html, body {
     overflow: hidden;
     touch-action: none;
     box-shadow: 
-        /* Tight white glow */
-        0 0 30px 5px rgba(255, 255, 255, 0.35),
+        /* Tight gold glow */
+        0 0 30px 5px rgba(232, 184, 74, 0.35),
         /* Medium spread */
-        0 0 60px 20px rgba(255, 255, 255, 0.2),
+        0 0 60px 20px rgba(232, 184, 74, 0.2),
         /* Wide atmospheric glow */
-        0 0 120px 40px rgba(255, 255, 255, 0.1),
+        0 0 120px 40px rgba(232, 184, 74, 0.1),
         /* Very wide subtle halo */
-        0 0 200px 60px rgba(255, 255, 255, 0.05),
+        0 0 200px 60px rgba(232, 184, 74, 0.05),
         /* Shadow for depth */
         0 8px 32px rgba(0,0,0,0.5);
     background: var(--bg-tertiary);
@@ -268,6 +268,143 @@ html, body {
 .card-placeholder svg { width: 48px; height: 48px; opacity: 0.5; }
 .card-placeholder span { font-size: 13px; }
 
+/* Fingerprint Region */
+.fingerprint-region {
+    position: absolute;
+    z-index: 15;
+    border: 2px solid rgba(232, 184, 74, 0.6);
+    border-radius: 4px;
+    cursor: pointer;
+    pointer-events: auto;
+    background: transparent;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    animation: fingerprint-pulse 2.5s ease-in-out infinite;
+}
+
+@keyframes fingerprint-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(232, 184, 74, 0.4), inset 0 0 8px rgba(232, 184, 74, 0.1); }
+    50% { box-shadow: 0 0 12px 4px rgba(232, 184, 74, 0.3), inset 0 0 12px rgba(232, 184, 74, 0.2); }
+}
+
+.fingerprint-region:hover {
+    border-color: rgba(232, 184, 74, 0.9);
+    animation: none;
+    box-shadow: 0 0 16px 6px rgba(232, 184, 74, 0.4), inset 0 0 12px rgba(232, 184, 74, 0.25);
+}
+
+.fingerprint-label {
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 4px 8px;
+    background: rgba(0, 0, 0, 0.85);
+    border: 1px solid rgba(232, 184, 74, 0.4);
+    border-radius: 4px;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent-gold);
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.fingerprint-region:hover .fingerprint-label,
+.fingerprint-region.show-label .fingerprint-label { opacity: 1; }
+
+.card-canvas.zoomed .fingerprint-region { opacity: 0; pointer-events: none; }
+
+/* Fingerprint Tooltip Overlay */
+.fingerprint-tooltip-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding: 20px;
+    padding-bottom: calc(100px + env(safe-area-inset-bottom));
+    z-index: 500;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.fingerprint-tooltip-overlay.visible { opacity: 1; visibility: visible; }
+
+.fingerprint-tooltip {
+    max-width: 360px;
+    padding: 20px;
+    background: linear-gradient(135deg, rgba(40, 40, 40, 0.98) 0%, rgba(30, 30, 30, 0.98) 100%);
+    border: 1px solid rgba(232, 184, 74, 0.3);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    transform: translateY(20px);
+    transition: transform 0.3s ease;
+}
+
+.fingerprint-tooltip-overlay.visible .fingerprint-tooltip { transform: translateY(0); }
+
+.fingerprint-tooltip-icon {
+    width: 40px; height: 40px;
+    background: rgba(232, 184, 74, 0.15);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 12px;
+}
+
+.fingerprint-tooltip-icon svg { width: 22px; height: 22px; color: var(--accent-gold); }
+
+.fingerprint-tooltip-title { font-size: 15px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px; }
+
+.fingerprint-tooltip-text { font-size: 13px; line-height: 1.6; color: var(--text-secondary); margin-bottom: 16px; }
+
+.fingerprint-tooltip-dismiss {
+    display: flex; align-items: center; justify-content: center;
+    width: 100%; padding: 12px;
+    background: rgba(232, 184, 74, 0.15);
+    border: 1px solid rgba(232, 184, 74, 0.3);
+    border-radius: var(--radius-sm);
+    font-size: 13px; font-weight: 600; color: var(--accent-gold);
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.fingerprint-tooltip-dismiss:hover { background: rgba(232, 184, 74, 0.25); }
+
+/* Recorded Seal Badge */
+.recorded-seal {
+    position: absolute;
+    top: 8px; left: 8px;
+    width: 32px; height: 32px;
+    z-index: 20;
+    opacity: 0.85;
+    pointer-events: none;
+}
+
+.recorded-seal svg { width: 100%; height: 100%; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4)); }
+
+/* View Fingerprint Button */
+.view-fingerprint-btn {
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 10px 16px;
+    min-height: var(--touch-target);
+    background: rgba(232, 184, 74, 0.1);
+    border: 1px solid rgba(232, 184, 74, 0.3);
+    border-radius: var(--radius-md);
+    font-size: 12px; font-weight: 600; color: var(--accent-gold);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.view-fingerprint-btn:hover { background: rgba(232, 184, 74, 0.2); border-color: rgba(232, 184, 74, 0.5); }
+.view-fingerprint-btn svg { width: 16px; height: 16px; }
+
 .card-controls {
     display: flex;
     gap: 8px;
@@ -315,10 +452,10 @@ html, body {
     min-width: 0;
 }
 
-/* Verification Card */
+/* Verification Card - gold theme for recorded state */
 .verification-card {
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.02) 100%);
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: linear-gradient(135deg, rgba(232, 184, 74, 0.08) 0%, rgba(232, 184, 74, 0.02) 100%);
+    border: 1px solid rgba(232, 184, 74, 0.2);
     border-radius: var(--radius-lg);
     padding: 20px;
 }
@@ -333,7 +470,7 @@ html, body {
 .verification-icon {
     width: 44px;
     height: 44px;
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(232, 184, 74, 0.15);
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -344,13 +481,13 @@ html, body {
 .verification-icon svg {
     width: 24px;
     height: 24px;
-    color: var(--accent-verified);
+    color: var(--accent-gold);
 }
 
 .verification-title {
     font-size: 16px;
     font-weight: 600;
-    color: var(--accent-verified);
+    color: var(--accent-gold);
 }
 
 .verification-subtitle {
@@ -371,7 +508,7 @@ html, body {
 .timestamp-display svg {
     width: 18px;
     height: 18px;
-    color: var(--accent-verified);
+    color: var(--accent-gold);
     flex-shrink: 0;
 }
 
@@ -542,15 +679,15 @@ html, body {
     align-items: flex-start;
     gap: 12px;
     padding: 14px 16px;
-    background: rgba(255,255,255,0.03);
+    background: rgba(232, 184, 74, 0.05);
     border-radius: var(--radius-md);
-    border: 1px solid var(--border-subtle);
+    border: 1px solid rgba(232, 184, 74, 0.15);
 }
 
 .fingerprint-hint svg {
     width: 20px;
     height: 20px;
-    color: var(--text-muted);
+    color: var(--accent-gold);
     flex-shrink: 0;
     margin-top: 1px;
 }
@@ -927,8 +1064,8 @@ html, body {
     overflow: hidden;
     background: radial-gradient(
         ellipse at center,
-        rgba(255, 255, 255, 0.06) 0%,
-        rgba(255, 255, 255, 0.03) 25%,
+        rgba(232, 184, 74, 0.08) 0%,
+        rgba(232, 184, 74, 0.04) 25%,
         rgba(0, 0, 0, 0) 50%,
         rgba(0, 0, 0, 0.3) 100%
     );
@@ -944,10 +1081,10 @@ html, body {
     overflow: hidden;
     touch-action: none;
     box-shadow: 
-        0 0 40px 10px rgba(255, 255, 255, 0.3),
-        0 0 80px 30px rgba(255, 255, 255, 0.15),
-        0 0 160px 60px rgba(255, 255, 255, 0.08),
-        0 0 280px 100px rgba(255, 255, 255, 0.04),
+        0 0 40px 10px rgba(232, 184, 74, 0.3),
+        0 0 80px 30px rgba(232, 184, 74, 0.15),
+        0 0 160px 60px rgba(232, 184, 74, 0.08),
+        0 0 280px 100px rgba(232, 184, 74, 0.04),
         0 12px 48px rgba(0,0,0,0.6);
     -webkit-user-select: none;
     user-select: none;
@@ -1078,6 +1215,17 @@ body.fullscreen-active {
                     <img class="card-layer layer-west" id="layer-west" alt="" src="" loading="eager">
                     <!-- Forensic Relief Map Canvas -->
                     <canvas class="forensic-canvas" id="forensic-canvas"></canvas>
+                    <!-- Fingerprint Region Indicator -->
+                    <button class="fingerprint-region" id="fingerprint-region" aria-label="Tap to inspect fingerprint region">
+                        <span class="fingerprint-label">Fingerprint Region</span>
+                    </button>
+                </div>
+                <!-- Recorded Seal Badge -->
+                <div class="recorded-seal" aria-hidden="true">
+                    <svg viewBox="0 0 32 32" fill="none">
+                        <circle cx="16" cy="16" r="14" fill="rgba(232, 184, 74, 0.15)" stroke="#E8B84A" stroke-width="1.5"/>
+                        <path d="M10 16.5L14 20.5L22 12.5" stroke="#E8B84A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
                 </div>
                 <button class="fullscreen-btn" id="fullscreen-btn" aria-label="Enter fullscreen mode">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1098,6 +1246,16 @@ body.fullscreen-active {
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/>
                     </svg>
+                </button>
+                <button class="view-fingerprint-btn" id="view-fingerprint-btn" aria-label="View fingerprint region">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 10a2 2 0 1 0 4 0 6 6 0 0 0-12 0c0 2.5.5 4 2 5.5"/>
+                        <path d="M4 4c3.5-1.5 8-1.5 12 0"/>
+                        <path d="M16 4v0a6 6 0 0 1 2 4.5"/>
+                        <path d="M12 18v4"/>
+                        <path d="M8 14c-.5.5-1 1.5-1 3"/>
+                    </svg>
+                    View Fingerprint
                 </button>
                 <button class="card-control-btn" id="zoom-in-btn" aria-label="Zoom in">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -1137,8 +1295,8 @@ body.fullscreen-active {
                         </svg>
                     </div>
                     <div>
-                        <div class="verification-title">Verified Digital Twin</div>
-                        <div class="verification-subtitle">Permanently recorded</div>
+                        <div class="verification-title">Digital Twin — Recorded</div>
+                        <div class="verification-subtitle">Permanently documented</div>
                     </div>
                 </div>
                 <div class="timestamp-display">
@@ -1147,7 +1305,7 @@ body.fullscreen-active {
                         <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
                     </svg>
                     <div>
-                        <span class="timestamp-label">Locked on</span>
+                        <span class="timestamp-label">Recorded on</span>
                         <span class="timestamp-text" id="display-timestamp">--</span>
                     </div>
                 </div>
@@ -1243,11 +1401,31 @@ body.fullscreen-active {
                     <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
                 </svg>
                 <p class="fingerprint-hint-text">
-                    This card's unique paper fiber pattern has been recorded. Future scans can verify authenticity by matching the microscopic surface texture.
+                    This card's unique surface texture has been permanently recorded. The microscopic fiber pattern captured above serves as a detailed physical record that travels with your card.
                 </p>
             </div>
         </section>
     </main>
+
+    <!-- Fingerprint Tooltip Overlay -->
+    <div class="fingerprint-tooltip-overlay" id="fingerprint-tooltip-overlay" role="dialog" aria-modal="true">
+        <div class="fingerprint-tooltip">
+            <div class="fingerprint-tooltip-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 10a2 2 0 1 0 4 0 6 6 0 0 0-12 0c0 2.5.5 4 2 5.5"/>
+                    <path d="M4 4c3.5-1.5 8-1.5 12 0"/>
+                    <path d="M16 4v0a6 6 0 0 1 2 4.5"/>
+                    <path d="M12 18v4"/>
+                    <path d="M8 14c-.5.5-1 1.5-1 3"/>
+                </svg>
+            </div>
+            <h3 class="fingerprint-tooltip-title">Unique Surface Fingerprint</h3>
+            <p class="fingerprint-tooltip-text">
+                Paper fibers create a unique surface pattern — like a fingerprint, no two cards are identical. This texture cannot be replicated by counterfeiters.
+            </p>
+            <button class="fingerprint-tooltip-dismiss" id="tooltip-dismiss">Got it</button>
+        </div>
+    </div>
 
     <!-- Fullscreen Overlay -->
     <div class="fullscreen-overlay" id="fullscreen-overlay" role="dialog" aria-modal="true" aria-label="Fullscreen card viewer">
@@ -1338,7 +1516,11 @@ const Lumina = (function() {
         minZoom: 1,
         maxZoom: 5,
         doubleTapDelay: 300,
-        doubleTapDistance: 30
+        doubleTapDistance: 30,
+        // Fingerprint region position (percentages)
+        fingerprintRegion: { left: 68, top: 40, width: 18, height: 10 },
+        fingerprintZoom: 3,
+        tooltipAutoDismiss: 5000
     };
 
     // Language and edition maps
@@ -1373,7 +1555,9 @@ const Lumina = (function() {
         lastTapY: 0,
         textureVisible: false,
         interactionMode: 'pan', // 'pan' or 'light'
-        imagesLoaded: false
+        imagesLoaded: false,
+        tooltipShown: false,
+        tooltipDismissTimer: null
     };
 
     // ============================================
@@ -1432,11 +1616,12 @@ const Lumina = (function() {
             
             if (animate) {
                 elements.cardCanvas.classList.add('animating');
-                setTimeout(() => elements.cardCanvas.classList.remove('animating'), 150);
+                setTimeout(() => elements.cardCanvas.classList.remove('animating'), 300);
             }
             
             this.applyTransform();
             this.updateZoomPill();
+            fingerprintRegion.updateZoomState();
         },
 
         constrainPan() {
@@ -1620,8 +1805,8 @@ const Lumina = (function() {
             const outputData = mainCtx.createImageData(width, height);
             
             // Photometric stereo: compute surface gradients from directional lighting
-            // dz/dx ≈ (East - West) / 2
-            // dz/dy ≈ (North - South) / 2  (note: image Y is inverted)
+            // dz/dx â‰ˆ (East - West) / 2
+            // dz/dy â‰ˆ (North - South) / 2  (note: image Y is inverted)
             
             for (let i = 0; i < northData.length; i += 4) {
                 // Get luminance from each direction
@@ -1696,6 +1881,91 @@ const Lumina = (function() {
             if (state.textureVisible && !this.computed) {
                 this.computeReliefMap();
             }
+        }
+    };
+
+    // ============================================
+    // FINGERPRINT REGION MODULE
+    // ============================================
+    const fingerprintRegion = {
+        init() {
+            this.positionRegion();
+            const region = document.getElementById('fingerprint-region');
+            const viewBtn = document.getElementById('view-fingerprint-btn');
+            const dismissBtn = document.getElementById('tooltip-dismiss');
+            const overlay = document.getElementById('fingerprint-tooltip-overlay');
+            
+            if (region) region.addEventListener('click', () => this.inspectFingerprint());
+            if (viewBtn) viewBtn.addEventListener('click', () => this.inspectFingerprint());
+            if (dismissBtn) dismissBtn.addEventListener('click', () => this.dismissTooltip());
+            if (overlay) overlay.addEventListener('click', (e) => { if (e.target === overlay) this.dismissTooltip(); });
+            
+            // Briefly show label on page load
+            setTimeout(() => {
+                if (region) {
+                    region.classList.add('show-label');
+                    setTimeout(() => region.classList.remove('show-label'), 3000);
+                }
+            }, 1000);
+        },
+
+        positionRegion() {
+            const region = document.getElementById('fingerprint-region');
+            if (!region) return;
+            const { left, top, width, height } = CONFIG.fingerprintRegion;
+            region.style.left = `${left}%`;
+            region.style.top = `${top}%`;
+            region.style.width = `${width}%`;
+            region.style.height = `${height}%`;
+        },
+
+        inspectFingerprint() {
+            // Calculate pan to center on fingerprint region
+            const { left, top, width, height } = CONFIG.fingerprintRegion;
+            const centerX = left + width / 2;
+            const centerY = top + height / 2;
+            
+            // Pan offset to center the region (50% is center)
+            state.panX = -(centerX - 50) * 2;
+            state.panY = -(centerY - 50) * 2;
+            
+            // Zoom to fingerprint level with animation
+            cardViewer.setZoom(CONFIG.fingerprintZoom, null, null, true);
+            
+            // Enable forensic texture if not already visible
+            if (!state.textureVisible) {
+                forensicAnalysis.toggle();
+            }
+            
+            // Show tooltip on first inspection
+            if (!state.tooltipShown) {
+                this.showTooltip();
+            }
+            
+            utils.vibrate(10);
+        },
+
+        showTooltip() {
+            const overlay = document.getElementById('fingerprint-tooltip-overlay');
+            if (overlay) {
+                overlay.classList.add('visible');
+                state.tooltipShown = true;
+                state.tooltipDismissTimer = setTimeout(() => this.dismissTooltip(), CONFIG.tooltipAutoDismiss);
+            }
+        },
+
+        dismissTooltip() {
+            const overlay = document.getElementById('fingerprint-tooltip-overlay');
+            if (overlay) overlay.classList.remove('visible');
+            if (state.tooltipDismissTimer) {
+                clearTimeout(state.tooltipDismissTimer);
+                state.tooltipDismissTimer = null;
+            }
+        },
+
+        updateZoomState() {
+            // Hide fingerprint region when zoomed
+            elements.cardCanvas.classList.toggle('zoomed', state.zoom > 1);
         }
     };
 
@@ -2366,6 +2636,7 @@ const Lumina = (function() {
         // Initialize modules
         cardViewer.init();
         forensicAnalysis.init();
+        fingerprintRegion.init();
         modeToggle.init();
         fullscreen.init();
         
@@ -2401,7 +2672,10 @@ const Lumina = (function() {
         }
         
         document.addEventListener('keydown', e => {
-            if (e.key === 'Escape' && fullscreen.isActive) fullscreen.exit();
+            if (e.key === 'Escape') {
+                if (fullscreen.isActive) fullscreen.exit();
+                fingerprintRegion.dismissTooltip();
+            }
         });
         
         if (fullscreenCardArea) {
