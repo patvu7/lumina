@@ -711,69 +711,35 @@ html, body {
 }
 
 /* ============================================
-   TEXTURE TOGGLE - FORENSIC MODE
+   TEXTURE TOGGLE
    ============================================ */
-/* The texture layer is now a canvas with computed relief data */
 .texture-layer {
     position: absolute;
     top: 0; left: 0;
     width: 100%; height: 100%;
-    pointer-events: none;
-    z-index: 20;  /* Above all RTI layers (1-5) */
-    opacity: 0;
-    transition: opacity 0.4s ease;
     object-fit: cover;
+    pointer-events: none;
+    z-index: 10;
+    opacity: 0;
+    transition: opacity 0.3s ease;
 }
 
 .texture-layer.visible {
     opacity: 1;
 }
 
-/* Forensic mode indicator badge */
-.forensic-badge {
-    position: absolute;
-    top: 8px;
-    left: 8px;
-    padding: 4px 10px;
-    background: rgba(232, 184, 74, 0.95);
-    border-radius: 4px;
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: #000;
-    z-index: 30;
-    opacity: 0;
-    transform: translateY(-4px);
-    transition: opacity 0.3s ease, transform 0.3s ease;
-    pointer-events: none;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-}
-
-.texture-layer.visible ~ .forensic-badge {
-    opacity: 1;
-    transform: translateY(0);
-}
-
-/* Forensic mode scanline effect */
-.forensic-scanlines {
+/* Forensic canvas overlay */
+.forensic-canvas {
     position: absolute;
     top: 0; left: 0;
     width: 100%; height: 100%;
     pointer-events: none;
-    z-index: 21;
+    z-index: 10;
     opacity: 0;
-    background: repeating-linear-gradient(
-        0deg,
-        transparent,
-        transparent 2px,
-        rgba(0, 0, 0, 0.02) 2px,
-        rgba(0, 0, 0, 0.02) 4px
-    );
-    transition: opacity 0.4s ease;
+    transition: opacity 0.3s ease;
 }
 
-.texture-layer.visible ~ .forensic-scanlines {
+.forensic-canvas.visible {
     opacity: 1;
 }
 
@@ -793,13 +759,10 @@ html, body {
     align-items: center;
     gap: 8px;
     cursor: pointer;
-    z-index: 35;
-    opacity: 0;
-    transition: opacity var(--transition-medium), background var(--transition-fast), border-color var(--transition-fast);
+    z-index: 25;
+    opacity: 1;
+    transition: background var(--transition-fast), border-color var(--transition-fast);
 }
-
-.card-wrapper:hover .texture-toggle-btn { opacity: 1; }
-@media (hover: none) { .texture-toggle-btn { opacity: 1; } }
 
 .texture-toggle-btn:hover { background: rgba(0,0,0,0.85); border-color: rgba(255,255,255,0.25); }
 .texture-toggle-btn:focus-visible { outline: 2px solid var(--accent-gold); outline-offset: 2px; }
@@ -1113,19 +1076,19 @@ body.fullscreen-active {
                     <img class="card-layer layer-south" id="layer-south" alt="" src="" loading="eager">
                     <img class="card-layer layer-east" id="layer-east" alt="" src="" loading="eager">
                     <img class="card-layer layer-west" id="layer-west" alt="" src="" loading="eager">
-                    <canvas class="card-layer texture-layer" id="texture-layer" aria-hidden="true"></canvas>
-                    <div class="forensic-badge" id="forensic-badge">FORENSIC</div>
-                    <div class="forensic-scanlines" aria-hidden="true"></div>
+                    <!-- Forensic Relief Map Canvas -->
+                    <canvas class="forensic-canvas" id="forensic-canvas"></canvas>
                 </div>
                 <button class="fullscreen-btn" id="fullscreen-btn" aria-label="Enter fullscreen mode">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
                     </svg>
                 </button>
-                <button class="texture-toggle-btn" id="texture-toggle-btn" aria-label="Toggle forensic texture analysis" aria-pressed="false">
+                <!-- Forensic Toggle Button -->
+                <button class="texture-toggle-btn" id="texture-toggle-btn" aria-label="Toggle forensic texture view" aria-pressed="false">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/>
                         <circle cx="12" cy="12" r="3"/>
+                        <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
                     </svg>
                     <span class="texture-toggle-label">Forensic</span>
                 </button>
@@ -1305,9 +1268,7 @@ body.fullscreen-active {
                     <img class="card-layer layer-south" id="fs-layer-south" alt="" src="" loading="eager">
                     <img class="card-layer layer-east" id="fs-layer-east" alt="" src="" loading="eager">
                     <img class="card-layer layer-west" id="fs-layer-west" alt="" src="" loading="eager">
-                    <canvas class="card-layer texture-layer" id="fs-texture-layer" aria-hidden="true"></canvas>
-                    <div class="forensic-badge" id="fs-forensic-badge">FORENSIC</div>
-                    <div class="forensic-scanlines" aria-hidden="true"></div>
+                    <canvas class="forensic-canvas" id="fs-forensic-canvas"></canvas>
                 </div>
             </div>
         </div>
@@ -1330,10 +1291,10 @@ body.fullscreen-active {
                 </div>
             </div>
             <div class="fullscreen-texture-toggle">
-                <button class="fs-texture-toggle-btn" id="fs-texture-toggle-btn" aria-label="Toggle forensic texture analysis" aria-pressed="false">
+                <button class="fs-texture-toggle-btn" id="fs-texture-toggle-btn" aria-label="Toggle forensic texture view" aria-pressed="false">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/>
                         <circle cx="12" cy="12" r="3"/>
+                        <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
                     </svg>
                     <span class="texture-toggle-label">Forensic</span>
                 </button>
@@ -1412,183 +1373,7 @@ const Lumina = (function() {
         lastTapY: 0,
         textureVisible: false,
         interactionMode: 'pan', // 'pan' or 'light'
-        forensicReady: false,
-        lightDirX: 0,
-        lightDirY: 0
-    };
-
-    // ============================================
-    // FORENSIC TEXTURE MODULE
-    // Computes relief maps from RTI directional images
-    // ============================================
-    const forensicTexture = {
-        gradientX: null,
-        gradientY: null,
-        albedo: null,
-        width: 0,
-        height: 0,
-        isComputing: false,
-        
-        async loadImageData(src) {
-            return new Promise((resolve, reject) => {
-                const img = new Image();
-                img.crossOrigin = 'anonymous';
-                img.onload = () => {
-                    const scale = 0.5;
-                    const w = Math.floor(img.width * scale);
-                    const h = Math.floor(img.height * scale);
-                    
-                    const canvas = document.createElement('canvas');
-                    canvas.width = w;
-                    canvas.height = h;
-                    const ctx = canvas.getContext('2d', { willReadFrequently: true });
-                    ctx.drawImage(img, 0, 0, w, h);
-                    
-                    try {
-                        const data = ctx.getImageData(0, 0, w, h);
-                        resolve({ data: data.data, width: w, height: h });
-                    } catch (e) {
-                        console.error('getImageData failed:', e);
-                        reject(e);
-                    }
-                };
-                img.onerror = (e) => {
-                    console.error('Image load failed:', src, e);
-                    reject(e);
-                };
-                img.src = src;
-            });
-        },
-
-        getLuminance(data, idx) {
-            return 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2];
-        },
-
-        async computeFromImages(imageUrls) {
-            if (this.isComputing) return;
-            this.isComputing = true;
-            
-            console.log('🔬 Starting forensic texture computation...');
-            
-            try {
-                const [northData, southData, eastData, westData, baseData] = await Promise.all([
-                    this.loadImageData(imageUrls.north),
-                    this.loadImageData(imageUrls.south),
-                    this.loadImageData(imageUrls.east),
-                    this.loadImageData(imageUrls.west),
-                    this.loadImageData(imageUrls.base)
-                ]);
-                
-                this.width = northData.width;
-                this.height = northData.height;
-                const pixelCount = this.width * this.height;
-                
-                this.gradientX = new Float32Array(pixelCount);
-                this.gradientY = new Float32Array(pixelCount);
-                this.albedo = new Float32Array(pixelCount);
-                
-                const north = northData.data;
-                const south = southData.data;
-                const east = eastData.data;
-                const west = westData.data;
-                const base = baseData.data;
-                
-                for (let i = 0; i < pixelCount; i++) {
-                    const idx = i * 4;
-                    const lumNorth = this.getLuminance(north, idx);
-                    const lumSouth = this.getLuminance(south, idx);
-                    const lumEast = this.getLuminance(east, idx);
-                    const lumWest = this.getLuminance(west, idx);
-                    const lumBase = this.getLuminance(base, idx);
-                    
-                    this.gradientX[i] = (lumWest - lumEast) / 255;
-                    this.gradientY[i] = (lumNorth - lumSouth) / 255;
-                    this.albedo[i] = lumBase / 255;
-                }
-                
-                console.log('✓ Forensic gradients computed');
-                state.forensicReady = true;
-                this.render(0, 0);
-                
-            } catch (e) {
-                console.error('❌ Failed to compute forensic texture:', e);
-            } finally {
-                this.isComputing = false;
-            }
-        },
-
-        render(lightX = 0, lightY = 0) {
-            if (!state.forensicReady) return;
-            
-            const mainCanvas = document.getElementById('texture-layer');
-            const fsCanvas = document.getElementById('fs-texture-layer');
-            
-            [mainCanvas, fsCanvas].forEach(canvas => {
-                if (!canvas) return;
-                
-                canvas.width = this.width;
-                canvas.height = this.height;
-                
-                const ctx = canvas.getContext('2d');
-                const imageData = ctx.createImageData(this.width, this.height);
-                const pixels = imageData.data;
-                const pixelCount = this.width * this.height;
-                
-                for (let i = 0; i < pixelCount; i++) {
-                    const gx = this.gradientX[i];
-                    const gy = this.gradientY[i];
-                    
-                    const lightZ = 0.3;
-                    const shade = (gx * lightX * 4) + (gy * lightY * 4) + lightZ;
-                    const gradMag = Math.sqrt(gx * gx + gy * gy);
-                    
-                    let relief = 0.5 + shade * 1.5;
-                    relief = Math.max(0, Math.min(1, relief));
-                    
-                    const edgeBoost = gradMag * 8.0;
-                    let r, g, b;
-                    
-                    if (relief > 0.5) {
-                        const t = (relief - 0.5) * 2;
-                        r = 30 + t * 225;
-                        g = 25 + t * 175;
-                        b = 15 + t * 60;
-                    } else {
-                        const t = relief * 2;
-                        r = 8 + t * 22;
-                        g = 12 + t * 13;
-                        b = 20 + t * (-5);
-                    }
-                    
-                    r += edgeBoost * 200;
-                    g += edgeBoost * 180;
-                    b += edgeBoost * 100;
-                    
-                    const idx = i * 4;
-                    pixels[idx] = Math.min(255, Math.max(0, Math.round(r)));
-                    pixels[idx + 1] = Math.min(255, Math.max(0, Math.round(g)));
-                    pixels[idx + 2] = Math.min(255, Math.max(0, Math.round(b)));
-                    pixels[idx + 3] = 255;
-                }
-                
-                ctx.putImageData(imageData, 0, 0);
-            });
-        },
-
-        updateLight(x, y) {
-            state.lightDirX = x;
-            state.lightDirY = y;
-            
-            if (state.textureVisible && state.forensicReady) {
-                if (!this._renderPending) {
-                    this._renderPending = true;
-                    requestAnimationFrame(() => {
-                        this.render(state.lightDirX, state.lightDirY);
-                        this._renderPending = false;
-                    });
-                }
-            }
-        }
+        imagesLoaded: false
     };
 
     // ============================================
@@ -1686,9 +1471,6 @@ const Lumina = (function() {
             this.layers.south.style.opacity = Math.min(1, Math.max(0, dy) * 1.4);
             this.layers.east.style.opacity = Math.min(1, Math.max(0, dx) * 1.4);
             this.layers.west.style.opacity = Math.min(1, Math.max(0, -dx) * 1.4);
-            
-            // Update forensic texture with light direction
-            forensicTexture.updateLight(dx, dy);
         },
 
         resetLight() {
@@ -1720,8 +1502,11 @@ const Lumina = (function() {
                         loadedCount++;
                         if (loadedCount === layers.length) {
                             document.getElementById('card-placeholder').style.display = 'none';
-                            // Compute forensic texture from all directional images
-                            forensicTexture.computeFromImages(imageData);
+                            state.imagesLoaded = true;
+                            // Notify forensic analysis that images are ready
+                            if (typeof forensicAnalysis !== 'undefined') {
+                                forensicAnalysis.onImagesLoaded();
+                            }
                         }
                     };
                     img.src = imageData[layer];
@@ -1731,12 +1516,19 @@ const Lumina = (function() {
     };
 
     // ============================================
-    // TEXTURE TOGGLE MODULE
+    // FORENSIC ANALYSIS MODULE (Photometric Stereo)
     // ============================================
-    const textureToggle = {
+    const forensicAnalysis = {
+        computed: false,
+        mainCanvas: null,
+        fsCanvas: null,
+        
         init() {
             const mainBtn = document.getElementById('texture-toggle-btn');
             const fsBtn = document.getElementById('fs-texture-toggle-btn');
+            
+            this.mainCanvas = document.getElementById('forensic-canvas');
+            this.fsCanvas = document.getElementById('fs-forensic-canvas');
             
             if (mainBtn) {
                 mainBtn.addEventListener('click', () => this.toggle());
@@ -1747,32 +1539,162 @@ const Lumina = (function() {
         },
 
         toggle() {
+            // Compute relief map on first toggle if not already done
+            if (!this.computed && state.imagesLoaded) {
+                this.computeReliefMap();
+            }
+            
             state.textureVisible = !state.textureVisible;
             this.updateUI();
             utils.vibrate(10);
         },
 
         updateUI() {
+            // Update main view
             const mainBtn = document.getElementById('texture-toggle-btn');
-            const mainTexture = document.getElementById('texture-layer');
             
             if (mainBtn) {
                 mainBtn.classList.toggle('active', state.textureVisible);
                 mainBtn.setAttribute('aria-pressed', state.textureVisible);
             }
-            if (mainTexture) {
-                mainTexture.classList.toggle('visible', state.textureVisible);
+            if (this.mainCanvas) {
+                this.mainCanvas.classList.toggle('visible', state.textureVisible);
             }
             
+            // Update fullscreen view
             const fsBtn = document.getElementById('fs-texture-toggle-btn');
-            const fsTexture = document.getElementById('fs-texture-layer');
             
             if (fsBtn) {
                 fsBtn.classList.toggle('active', state.textureVisible);
                 fsBtn.setAttribute('aria-pressed', state.textureVisible);
             }
-            if (fsTexture) {
-                fsTexture.classList.toggle('visible', state.textureVisible);
+            if (this.fsCanvas) {
+                this.fsCanvas.classList.toggle('visible', state.textureVisible);
+            }
+        },
+
+        computeReliefMap() {
+            // Get the directional images
+            const northImg = document.getElementById('layer-north');
+            const southImg = document.getElementById('layer-south');
+            const eastImg = document.getElementById('layer-east');
+            const westImg = document.getElementById('layer-west');
+            
+            if (!northImg.complete || !southImg.complete || !eastImg.complete || !westImg.complete) {
+                console.log('Images not loaded yet');
+                return;
+            }
+            
+            const width = northImg.naturalWidth;
+            const height = northImg.naturalHeight;
+            
+            if (width === 0 || height === 0) {
+                console.log('Invalid image dimensions');
+                return;
+            }
+            
+            console.log(`Computing relief map: ${width}x${height}`);
+            
+            // Create temporary canvas to read pixel data
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = width;
+            tempCanvas.height = height;
+            const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true });
+            
+            // Get pixel data from each directional image
+            const getImageData = (img) => {
+                tempCtx.clearRect(0, 0, width, height);
+                tempCtx.drawImage(img, 0, 0);
+                return tempCtx.getImageData(0, 0, width, height).data;
+            };
+            
+            const northData = getImageData(northImg);
+            const southData = getImageData(southImg);
+            const eastData = getImageData(eastImg);
+            const westData = getImageData(westImg);
+            
+            // Setup main forensic canvas
+            this.mainCanvas.width = width;
+            this.mainCanvas.height = height;
+            const mainCtx = this.mainCanvas.getContext('2d');
+            const outputData = mainCtx.createImageData(width, height);
+            
+            // Photometric stereo: compute surface gradients from directional lighting
+            // dz/dx ≈ (East - West) / 2
+            // dz/dy ≈ (North - South) / 2  (note: image Y is inverted)
+            
+            for (let i = 0; i < northData.length; i += 4) {
+                // Get luminance from each direction
+                const lNorth = (northData[i] * 0.299 + northData[i+1] * 0.587 + northData[i+2] * 0.114);
+                const lSouth = (southData[i] * 0.299 + southData[i+1] * 0.587 + southData[i+2] * 0.114);
+                const lEast = (eastData[i] * 0.299 + eastData[i+1] * 0.587 + eastData[i+2] * 0.114);
+                const lWest = (westData[i] * 0.299 + westData[i+1] * 0.587 + westData[i+2] * 0.114);
+                
+                // Compute surface gradients (normalized to -1 to 1 range)
+                const dx = (lEast - lWest) / 255;  // X gradient
+                const dy = (lSouth - lNorth) / 255; // Y gradient (inverted for image coords)
+                
+                // Compute surface normal from gradients
+                // N = normalize(-dx, -dy, 1)
+                const mag = Math.sqrt(dx * dx + dy * dy + 1);
+                const nx = -dx / mag;
+                const ny = -dy / mag;
+                const nz = 1 / mag;
+                
+                // Light from upper-left for dramatic relief effect
+                const lightX = -0.5;
+                const lightY = -0.5;
+                const lightZ = 0.707;
+                
+                // Diffuse shading
+                let diffuse = nx * lightX + ny * lightY + nz * lightZ;
+                diffuse = Math.max(0, diffuse);
+                
+                // Edge detection based on gradient magnitude
+                const gradMag = Math.sqrt(dx * dx + dy * dy);
+                const edge = Math.min(1, gradMag * 3);
+                
+                // Amber/gold highlight color for raised areas
+                const highlight = Math.pow(diffuse, 0.8);
+                
+                // Dark background with amber highlights
+                // Base: dark gray, Highlights: amber/gold
+                const baseR = 20;
+                const baseG = 18;
+                const baseB = 15;
+                
+                const highlightR = 255;
+                const highlightG = 180;
+                const highlightB = 50;
+                
+                // Mix based on lighting
+                const r = Math.round(baseR + (highlightR - baseR) * highlight * 0.9 + edge * 60);
+                const g = Math.round(baseG + (highlightG - baseG) * highlight * 0.9 + edge * 40);
+                const b = Math.round(baseB + (highlightB - baseB) * highlight * 0.5 + edge * 20);
+                
+                outputData.data[i] = Math.min(255, r);
+                outputData.data[i + 1] = Math.min(255, g);
+                outputData.data[i + 2] = Math.min(255, b);
+                outputData.data[i + 3] = 255;
+            }
+            
+            mainCtx.putImageData(outputData, 0, 0);
+            
+            // Copy to fullscreen canvas
+            this.fsCanvas.width = width;
+            this.fsCanvas.height = height;
+            const fsCtx = this.fsCanvas.getContext('2d');
+            fsCtx.drawImage(this.mainCanvas, 0, 0);
+            
+            this.computed = true;
+            console.log('Relief map computed');
+        },
+        
+        // Call this when images are loaded
+        onImagesLoaded() {
+            // Pre-compute if forensic view is already visible
+            if (state.textureVisible && !this.computed) {
+                this.computeReliefMap();
             }
         }
     };
@@ -1850,10 +1772,8 @@ const Lumina = (function() {
                 document.getElementById(`fs-layer-${layer}`).src = src;
             });
             
-            const textureSrc = document.getElementById('texture-layer').src;
-            document.getElementById('fs-texture-layer').src = textureSrc;
-            
-            textureToggle.updateUI();
+            // Sync forensic toggle state
+            forensicAnalysis.updateUI();
             this.fsState = { zoom: 1, panX: 0, panY: 0 };
             this.applyTransform();
             this.updateZoomLevel();
@@ -1909,9 +1829,6 @@ const Lumina = (function() {
                 fsLayers.south.style.opacity = Math.min(1, Math.max(0, dy) * 1.4);
                 fsLayers.east.style.opacity = Math.min(1, Math.max(0, dx) * 1.4);
                 fsLayers.west.style.opacity = Math.min(1, Math.max(0, -dx) * 1.4);
-                
-                // Update forensic texture with light direction
-                forensicTexture.updateLight(dx, dy);
             };
 
             const resetLight = () => Object.values(fsLayers).forEach(l => l.style.opacity = 0);
@@ -2448,7 +2365,7 @@ const Lumina = (function() {
 
         // Initialize modules
         cardViewer.init();
-        textureToggle.init();
+        forensicAnalysis.init();
         modeToggle.init();
         fullscreen.init();
         
