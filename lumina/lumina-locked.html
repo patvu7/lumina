@@ -715,7 +715,7 @@ html, body {
     opacity: 1;
 }
 
-/* Forensic canvas overlay */
+/* Surface relief canvas overlay */
 .forensic-canvas {
     position: absolute;
     top: 0; left: 0;
@@ -1063,7 +1063,7 @@ body.fullscreen-active {
                     <img class="card-layer layer-south" id="layer-south" alt="" src="" loading="eager">
                     <img class="card-layer layer-east" id="layer-east" alt="" src="" loading="eager">
                     <img class="card-layer layer-west" id="layer-west" alt="" src="" loading="eager">
-                    <!-- Forensic Relief Map Canvas -->
+                    <!-- Surface Relief Map Canvas -->
                     <canvas class="forensic-canvas" id="forensic-canvas"></canvas>
                 </div>
                 <!-- Recorded Seal Badge -->
@@ -1078,13 +1078,13 @@ body.fullscreen-active {
                         <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
                     </svg>
                 </button>
-                <!-- Forensic Toggle Button -->
-                <button class="texture-toggle-btn" id="texture-toggle-btn" aria-label="Toggle forensic texture view" aria-pressed="false">
+                <!-- Surface Detail Toggle Button -->
+                <button class="texture-toggle-btn" id="texture-toggle-btn" aria-label="Toggle surface detail view" aria-pressed="false">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <circle cx="12" cy="12" r="3"/>
                         <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
                     </svg>
-                    <span class="texture-toggle-label">Forensic</span>
+                    <span class="texture-toggle-label">Surface</span>
                 </button>
             </div>
             <div class="card-controls">
@@ -1274,12 +1274,12 @@ body.fullscreen-active {
                 </div>
             </div>
             <div class="fullscreen-texture-toggle">
-                <button class="fs-texture-toggle-btn" id="fs-texture-toggle-btn" aria-label="Toggle forensic texture view" aria-pressed="false">
+                <button class="fs-texture-toggle-btn" id="fs-texture-toggle-btn" aria-label="Toggle surface detail view" aria-pressed="false">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <circle cx="12" cy="12" r="3"/>
                         <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
                     </svg>
-                    <span class="texture-toggle-label">Forensic</span>
+                    <span class="texture-toggle-label">Surface</span>
                 </button>
             </div>
             <div class="fullscreen-zoom-controls">
@@ -1624,7 +1624,7 @@ const Lumina = (function() {
                 const ny = -dy / mag;
                 const nz = 1 / mag;
                 
-                // Light from upper-left for dramatic relief effect
+                // Light from upper-left for relief effect
                 const lightX = -0.5;
                 const lightY = -0.5;
                 const lightZ = 0.707;
@@ -1635,29 +1635,31 @@ const Lumina = (function() {
                 
                 // Edge detection based on gradient magnitude
                 const gradMag = Math.sqrt(dx * dx + dy * dy);
-                const edge = Math.min(1, gradMag * 3);
+                const edge = Math.min(1, gradMag * 2.5);
                 
-                // Amber/gold highlight color for raised areas
-                const highlight = Math.pow(diffuse, 0.8);
+                // Scientific grayscale visualization
+                // Pure luminance-based relief map
+                const shade = Math.pow(diffuse, 0.9);
                 
-                // Dark background with amber highlights
-                // Base: dark gray, Highlights: amber/gold
-                const baseR = 20;
-                const baseG = 18;
-                const baseB = 15;
+                // Neutral grayscale with subtle blue tint for depth perception
+                // Base: dark gray, Highlights: light gray
+                const baseVal = 25;
+                const highlightVal = 240;
                 
-                const highlightR = 255;
-                const highlightG = 180;
-                const highlightB = 50;
+                // Linear interpolation for clean scientific look
+                const luminance = Math.round(baseVal + (highlightVal - baseVal) * shade);
                 
-                // Mix based on lighting
-                const r = Math.round(baseR + (highlightR - baseR) * highlight * 0.9 + edge * 60);
-                const g = Math.round(baseG + (highlightG - baseG) * highlight * 0.9 + edge * 40);
-                const b = Math.round(baseB + (highlightB - baseB) * highlight * 0.5 + edge * 20);
+                // Add edge enhancement for surface detail visibility
+                const edgeBoost = Math.round(edge * 40);
                 
-                outputData.data[i] = Math.min(255, r);
-                outputData.data[i + 1] = Math.min(255, g);
-                outputData.data[i + 2] = Math.min(255, b);
+                // Slight cool tint (blue channel slightly higher) for scientific aesthetic
+                const r = Math.min(255, luminance + edgeBoost);
+                const g = Math.min(255, luminance + edgeBoost);
+                const b = Math.min(255, Math.round(luminance * 1.05) + edgeBoost);
+                
+                outputData.data[i] = r;
+                outputData.data[i + 1] = g;
+                outputData.data[i + 2] = b;
                 outputData.data[i + 3] = 255;
             }
             
