@@ -1153,7 +1153,7 @@ body.fullscreen-active {
                         </svg>
                     </div>
                     <div>
-                        <div class="verification-title">Digital Twin â€” Recorded</div>
+                        <div class="verification-title">Digital Twin — Recorded</div>
                         <div class="verification-subtitle">Permanently documented</div>
                     </div>
                 </div>
@@ -1379,7 +1379,10 @@ const Lumina = (function() {
         lastTapY: 0,
         textureVisible: false,
         interactionMode: 'pan', // 'pan' or 'light'
-        imagesLoaded: false
+        imagesLoaded: false,
+        forensicReady: false,
+        lightDirX: 0,
+        lightDirY: 0
     };
 
     // ============================================
@@ -1477,6 +1480,9 @@ const Lumina = (function() {
             this.layers.south.style.opacity = Math.min(1, Math.max(0, dy) * 1.4);
             this.layers.east.style.opacity = Math.min(1, Math.max(0, dx) * 1.4);
             this.layers.west.style.opacity = Math.min(1, Math.max(0, -dx) * 1.4);
+            
+            // Update forensic texture lighting if visible
+            forensicTexture.updateLight(dx, dy);
         },
 
         resetLight() {
@@ -1498,6 +1504,9 @@ const Lumina = (function() {
         },
 
         loadImages(imageData) {
+            // Store for forensic computation
+            this._imageUrls = imageData;
+            
             const layers = ['base', 'north', 'south', 'east', 'west'];
             let loadedCount = 0;
 
@@ -1509,10 +1518,10 @@ const Lumina = (function() {
                         if (loadedCount === layers.length) {
                             document.getElementById('card-placeholder').style.display = 'none';
                             state.imagesLoaded = true;
-                            // Notify forensic analysis that images are ready
-                            if (typeof forensicAnalysis !== 'undefined') {
-                                forensicAnalysis.onImagesLoaded();
-                            }
+                            
+                            // Compute forensic texture map from directional images
+                            console.log('All RTI layers loaded, computing forensic map...');
+                            forensicTexture.computeFromImages(imageData);
                         }
                     };
                     img.src = imageData[layer];
@@ -1522,19 +1531,249 @@ const Lumina = (function() {
     };
 
     // ============================================
-    // FORENSIC ANALYSIS MODULE (Photometric Stereo)
+    // FORENSIC TEXTURE MODULE
+    // Computes relief maps from RTI directional images
     // ============================================
-    const forensicAnalysis = {
-        computed: false,
-        mainCanvas: null,
-        fsCanvas: null,
+    const forensicTexture = {
+        // Store computed gradient maps
+        gradientX: null,  // Float32Array of X gradients (west-east)
+        gradientY: null,  // Float32Array of Y gradients (north-south)
+        albedo: null,     // Float32Array of base brightness
+        width: 0,
+        height: 0,
+        isComputing: false,
         
+        /**
+         * Load an image and return its pixel data at reduced resolution
+         * Using reduced resolution (50%) for performance on mobile
+         */
+        async loadImageData(src) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+                img.onload = () => {
+                    // Reduce resolution for performance
+                    const scale = 0.5;
+                    const w = Math.floor(img.width * scale);
+                    const h = Math.floor(img.height * scale);
+                    
+                    const canvas = document.createElement('canvas');
+                    canvas.width = w;
+                    canvas.height = h;
+                    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+                    ctx.drawImage(img, 0, 0, w, h);
+                    
+                    try {
+                        const data = ctx.getImageData(0, 0, w, h);
+                        resolve({ data: data.data, width: w, height: h });
+                    } catch (e) {
+                        console.error('getImageData failed:', e);
+                        reject(e);
+                    }
+                };
+                img.onerror = (e) => {
+                    console.error('Image load failed:', src, e);
+                    reject(e);
+                };
+                img.src = src;
+            });
+        },
+
+        /**
+         * Extract luminance from RGBA data
+         */
+        getLuminance(data, idx) {
+            // Weighted luminance: 0.299R + 0.587G + 0.114B
+            return 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2];
+        },
+
+        /**
+         * Compute the forensic texture map from directional images
+         * Uses photometric stereo: gradient proportional to (light1 - light2)
+         */
+        async computeFromImages(imageUrls) {
+            if (this.isComputing) {
+                console.log('Already computing forensic texture...');
+                return;
+            }
+            this.isComputing = true;
+            
+            console.log('Starting forensic texture computation...');
+            console.log('Image URLs:', imageUrls);
+            
+            try {
+                // Load all directional images
+                const [northData, southData, eastData, westData, baseData] = await Promise.all([
+                    this.loadImageData(imageUrls.north),
+                    this.loadImageData(imageUrls.south),
+                    this.loadImageData(imageUrls.east),
+                    this.loadImageData(imageUrls.west),
+                    this.loadImageData(imageUrls.base)
+                ]);
+                
+                console.log('All images loaded:', northData.width, 'x', northData.height);
+                
+                this.width = northData.width;
+                this.height = northData.height;
+                const pixelCount = this.width * this.height;
+                
+                // Allocate arrays
+                this.gradientX = new Float32Array(pixelCount);
+                this.gradientY = new Float32Array(pixelCount);
+                this.albedo = new Float32Array(pixelCount);
+                
+                const north = northData.data;
+                const south = southData.data;
+                const east = eastData.data;
+                const west = westData.data;
+                const base = baseData.data;
+                
+                // Compute gradients using photometric stereo principle
+                // Nx proportional to (west - east), Ny proportional to (north - south)
+                let maxGradX = 0, maxGradY = 0;
+                for (let i = 0; i < pixelCount; i++) {
+                    const idx = i * 4;
+                    
+                    const lumNorth = this.getLuminance(north, idx);
+                    const lumSouth = this.getLuminance(south, idx);
+                    const lumEast = this.getLuminance(east, idx);
+                    const lumWest = this.getLuminance(west, idx);
+                    const lumBase = this.getLuminance(base, idx);
+                    
+                    // Gradient in X direction (west-east difference)
+                    this.gradientX[i] = (lumWest - lumEast) / 255;
+                    
+                    // Gradient in Y direction (north-south difference)  
+                    this.gradientY[i] = (lumNorth - lumSouth) / 255;
+                    
+                    // Store base albedo for blending
+                    this.albedo[i] = lumBase / 255;
+                    
+                    maxGradX = Math.max(maxGradX, Math.abs(this.gradientX[i]));
+                    maxGradY = Math.max(maxGradY, Math.abs(this.gradientY[i]));
+                }
+                
+                console.log('Gradients computed. Max X:', maxGradX.toFixed(3), 'Max Y:', maxGradY.toFixed(3));
+                
+                state.forensicReady = true;
+                
+                // Render initial state
+                this.render(0, 0);
+                console.log('Forensic texture ready!');
+                
+            } catch (e) {
+                console.error('Failed to compute forensic texture:', e);
+            } finally {
+                this.isComputing = false;
+            }
+        },
+
+        /**
+         * Render the forensic texture to a canvas element
+         * @param {number} lightX - Light direction X (-1 to 1)
+         * @param {number} lightY - Light direction Y (-1 to 1)
+         */
+        render(lightX = 0, lightY = 0) {
+            if (!state.forensicReady) {
+                console.log('Forensic not ready, skipping render');
+                return;
+            }
+            
+            const mainCanvas = document.getElementById('forensic-canvas');
+            const fsCanvas = document.getElementById('fs-forensic-canvas');
+            
+            // Render to both canvases
+            [mainCanvas, fsCanvas].forEach((canvas, idx) => {
+                if (!canvas) {
+                    console.log('Canvas not found:', idx === 0 ? 'main' : 'fullscreen');
+                    return;
+                }
+                
+                // Set canvas internal resolution
+                canvas.width = this.width;
+                canvas.height = this.height;
+                
+                const ctx = canvas.getContext('2d');
+                const imageData = ctx.createImageData(this.width, this.height);
+                const pixels = imageData.data;
+                
+                const pixelCount = this.width * this.height;
+                
+                // Compute lighting based on virtual light direction
+                for (let i = 0; i < pixelCount; i++) {
+                    const gx = this.gradientX[i];
+                    const gy = this.gradientY[i];
+                    
+                    // Dot product with light direction gives shading
+                    const lightZ = 0.4;
+                    const shade = (gx * lightX * 3) + (gy * lightY * 3) + lightZ;
+                    
+                    // Compute gradient magnitude for edge detection
+                    const gradMag = Math.sqrt(gx * gx + gy * gy);
+                    
+                    // Scientific grayscale visualization
+                    // Normalize shade to 0-1 range
+                    let relief = 0.5 + shade * 1.2;
+                    relief = Math.max(0, Math.min(1, relief));
+                    
+                    // Edge enhancement for surface detail visibility
+                    const edgeBoost = gradMag * 2.5;
+                    
+                    // Neutral grayscale with subtle cool tint
+                    // Base: dark gray, Highlights: light gray
+                    const baseVal = 25;
+                    const highlightVal = 240;
+                    
+                    // Linear interpolation for clean scientific look
+                    const luminance = baseVal + (highlightVal - baseVal) * Math.pow(relief, 0.9);
+                    
+                    // Add edge enhancement
+                    const edgeAdd = edgeBoost * 40;
+                    
+                    // Slight cool tint (blue channel slightly higher) for scientific aesthetic
+                    const r = Math.min(255, Math.max(0, Math.round(luminance + edgeAdd)));
+                    const g = Math.min(255, Math.max(0, Math.round(luminance + edgeAdd)));
+                    const b = Math.min(255, Math.max(0, Math.round(luminance * 1.05 + edgeAdd)));
+                    
+                    const idx = i * 4;
+                    pixels[idx] = r;
+                    pixels[idx + 1] = g;
+                    pixels[idx + 2] = b;
+                    pixels[idx + 3] = 255;
+                }
+                
+                ctx.putImageData(imageData, 0, 0);
+            });
+        },
+
+        /**
+         * Update the forensic texture based on current light direction
+         * Called during RTI interaction when texture is visible
+         */
+        updateLight(x, y) {
+            state.lightDirX = x;
+            state.lightDirY = y;
+            
+            if (state.textureVisible && state.forensicReady) {
+                // Throttle renders for performance
+                if (!this._renderPending) {
+                    this._renderPending = true;
+                    requestAnimationFrame(() => {
+                        this.render(state.lightDirX, state.lightDirY);
+                        this._renderPending = false;
+                    });
+                }
+            }
+        }
+    };
+
+    // ============================================
+    // TEXTURE TOGGLE MODULE
+    // ============================================
+    const textureToggle = {
         init() {
             const mainBtn = document.getElementById('texture-toggle-btn');
             const fsBtn = document.getElementById('fs-texture-toggle-btn');
-            
-            this.mainCanvas = document.getElementById('forensic-canvas');
-            this.fsCanvas = document.getElementById('fs-forensic-canvas');
             
             if (mainBtn) {
                 mainBtn.addEventListener('click', () => this.toggle());
@@ -1545,27 +1784,28 @@ const Lumina = (function() {
         },
 
         toggle() {
-            // Compute relief map on first toggle if not already done
-            if (!this.computed && state.imagesLoaded) {
-                this.computeReliefMap();
-            }
-            
             state.textureVisible = !state.textureVisible;
             this.updateUI();
             utils.vibrate(10);
+            
+            // Re-render forensic texture with current light direction when toggled on
+            if (state.textureVisible && state.forensicReady) {
+                forensicTexture.render(state.lightDirX, state.lightDirY);
+            }
         },
 
         updateUI() {
             // Update main view
             const mainBtn = document.getElementById('texture-toggle-btn');
+            const mainCanvas = document.getElementById('forensic-canvas');
             const mainBadge = document.getElementById('forensic-badge');
             
             if (mainBtn) {
                 mainBtn.classList.toggle('active', state.textureVisible);
                 mainBtn.setAttribute('aria-pressed', state.textureVisible);
             }
-            if (this.mainCanvas) {
-                this.mainCanvas.classList.toggle('visible', state.textureVisible);
+            if (mainCanvas) {
+                mainCanvas.classList.toggle('visible', state.textureVisible);
             }
             if (mainBadge) {
                 mainBadge.style.opacity = state.textureVisible ? '1' : '0';
@@ -1574,145 +1814,19 @@ const Lumina = (function() {
             
             // Update fullscreen view
             const fsBtn = document.getElementById('fs-texture-toggle-btn');
+            const fsCanvas = document.getElementById('fs-forensic-canvas');
             const fsBadge = document.getElementById('fs-forensic-badge');
             
             if (fsBtn) {
                 fsBtn.classList.toggle('active', state.textureVisible);
                 fsBtn.setAttribute('aria-pressed', state.textureVisible);
             }
-            if (this.fsCanvas) {
-                this.fsCanvas.classList.toggle('visible', state.textureVisible);
+            if (fsCanvas) {
+                fsCanvas.classList.toggle('visible', state.textureVisible);
             }
             if (fsBadge) {
                 fsBadge.style.opacity = state.textureVisible ? '1' : '0';
                 fsBadge.style.transform = state.textureVisible ? 'translateY(0)' : 'translateY(-4px)';
-            }
-        },
-
-        computeReliefMap() {
-            // Get the directional images
-            const northImg = document.getElementById('layer-north');
-            const southImg = document.getElementById('layer-south');
-            const eastImg = document.getElementById('layer-east');
-            const westImg = document.getElementById('layer-west');
-            
-            if (!northImg.complete || !southImg.complete || !eastImg.complete || !westImg.complete) {
-                console.log('Images not loaded yet');
-                return;
-            }
-            
-            const width = northImg.naturalWidth;
-            const height = northImg.naturalHeight;
-            
-            if (width === 0 || height === 0) {
-                console.log('Invalid image dimensions');
-                return;
-            }
-            
-            console.log(`Computing relief map: ${width}x${height}`);
-            
-            // Create temporary canvas to read pixel data
-            const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = width;
-            tempCanvas.height = height;
-            const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true });
-            
-            // Get pixel data from each directional image
-            const getImageData = (img) => {
-                tempCtx.clearRect(0, 0, width, height);
-                tempCtx.drawImage(img, 0, 0);
-                return tempCtx.getImageData(0, 0, width, height).data;
-            };
-            
-            const northData = getImageData(northImg);
-            const southData = getImageData(southImg);
-            const eastData = getImageData(eastImg);
-            const westData = getImageData(westImg);
-            
-            // Setup main forensic canvas
-            this.mainCanvas.width = width;
-            this.mainCanvas.height = height;
-            const mainCtx = this.mainCanvas.getContext('2d');
-            const outputData = mainCtx.createImageData(width, height);
-            
-            // Photometric stereo: compute surface gradients from directional lighting
-            // dz/dx â‰ˆ (East - West) / 2
-            // dz/dy â‰ˆ (North - South) / 2  (note: image Y is inverted)
-            
-            for (let i = 0; i < northData.length; i += 4) {
-                // Get luminance from each direction
-                const lNorth = (northData[i] * 0.299 + northData[i+1] * 0.587 + northData[i+2] * 0.114);
-                const lSouth = (southData[i] * 0.299 + southData[i+1] * 0.587 + southData[i+2] * 0.114);
-                const lEast = (eastData[i] * 0.299 + eastData[i+1] * 0.587 + eastData[i+2] * 0.114);
-                const lWest = (westData[i] * 0.299 + westData[i+1] * 0.587 + westData[i+2] * 0.114);
-                
-                // Compute surface gradients (normalized to -1 to 1 range)
-                const dx = (lEast - lWest) / 255;  // X gradient
-                const dy = (lSouth - lNorth) / 255; // Y gradient (inverted for image coords)
-                
-                // Compute surface normal from gradients
-                // N = normalize(-dx, -dy, 1)
-                const mag = Math.sqrt(dx * dx + dy * dy + 1);
-                const nx = -dx / mag;
-                const ny = -dy / mag;
-                const nz = 1 / mag;
-                
-                // Light from upper-left for relief effect
-                const lightX = -0.5;
-                const lightY = -0.5;
-                const lightZ = 0.707;
-                
-                // Diffuse shading
-                let diffuse = nx * lightX + ny * lightY + nz * lightZ;
-                diffuse = Math.max(0, diffuse);
-                
-                // Edge detection based on gradient magnitude
-                const gradMag = Math.sqrt(dx * dx + dy * dy);
-                const edge = Math.min(1, gradMag * 2.5);
-                
-                // Scientific grayscale visualization
-                // Pure luminance-based relief map
-                const shade = Math.pow(diffuse, 0.9);
-                
-                // Neutral grayscale with subtle blue tint for depth perception
-                // Base: dark gray, Highlights: light gray
-                const baseVal = 25;
-                const highlightVal = 240;
-                
-                // Linear interpolation for clean scientific look
-                const luminance = Math.round(baseVal + (highlightVal - baseVal) * shade);
-                
-                // Add edge enhancement for surface detail visibility
-                const edgeBoost = Math.round(edge * 40);
-                
-                // Slight cool tint (blue channel slightly higher) for scientific aesthetic
-                const r = Math.min(255, luminance + edgeBoost);
-                const g = Math.min(255, luminance + edgeBoost);
-                const b = Math.min(255, Math.round(luminance * 1.05) + edgeBoost);
-                
-                outputData.data[i] = r;
-                outputData.data[i + 1] = g;
-                outputData.data[i + 2] = b;
-                outputData.data[i + 3] = 255;
-            }
-            
-            mainCtx.putImageData(outputData, 0, 0);
-            
-            // Copy to fullscreen canvas
-            this.fsCanvas.width = width;
-            this.fsCanvas.height = height;
-            const fsCtx = this.fsCanvas.getContext('2d');
-            fsCtx.drawImage(this.mainCanvas, 0, 0);
-            
-            this.computed = true;
-            console.log('Relief map computed');
-        },
-        
-        // Call this when images are loaded
-        onImagesLoaded() {
-            // Pre-compute if forensic view is already visible
-            if (state.textureVisible && !this.computed) {
-                this.computeReliefMap();
             }
         }
     };
@@ -2383,7 +2497,7 @@ const Lumina = (function() {
 
         // Initialize modules
         cardViewer.init();
-        forensicAnalysis.init();
+        textureToggle.init();
         modeToggle.init();
         fullscreen.init();
         
