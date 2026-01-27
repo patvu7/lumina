@@ -1131,7 +1131,7 @@ body.fullscreen-active {
                         </svg>
                     </div>
                     <div>
-                        <div class="verification-title">Digital Twin â€” Recorded</div>
+                        <div class="verification-title">Digital Twin — Recorded</div>
                         <div class="verification-subtitle">Permanently documented</div>
                     </div>
                 </div>
@@ -1603,8 +1603,8 @@ const Lumina = (function() {
             const outputData = mainCtx.createImageData(width, height);
             
             // Photometric stereo: compute surface gradients from directional lighting
-            // dz/dx Ã¢â€°Ë† (East - West) / 2
-            // dz/dy Ã¢â€°Ë† (North - South) / 2  (note: image Y is inverted)
+            // dz/dx ≈ (East - West) / 2
+            // dz/dy ≈ (North - South) / 2  (note: image Y is inverted)
             
             for (let i = 0; i < northData.length; i += 4) {
                 // Get luminance from each direction
