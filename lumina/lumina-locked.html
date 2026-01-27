@@ -721,13 +721,34 @@ html, body {
     top: 0; left: 0;
     width: 100%; height: 100%;
     pointer-events: none;
-    z-index: 10;
+    z-index: 20;
     opacity: 0;
     transition: opacity 0.3s ease;
 }
 
 .forensic-canvas.visible {
     opacity: 1;
+}
+
+/* Surface mode indicator badge */
+.forensic-badge {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    padding: 4px 10px;
+    background: rgba(200, 210, 220, 0.95);
+    border-radius: 4px;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #1a1a1a;
+    z-index: 30;
+    opacity: 0;
+    transform: translateY(-4px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    pointer-events: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
 }
 
 .texture-toggle-btn {
@@ -1065,6 +1086,7 @@ body.fullscreen-active {
                     <img class="card-layer layer-west" id="layer-west" alt="" src="" loading="eager">
                     <!-- Surface Relief Map Canvas -->
                     <canvas class="forensic-canvas" id="forensic-canvas"></canvas>
+                    <div class="forensic-badge" id="forensic-badge">SURFACE</div>
                 </div>
                 <!-- Recorded Seal Badge -->
                 <div class="recorded-seal" aria-hidden="true">
@@ -1131,7 +1153,7 @@ body.fullscreen-active {
                         </svg>
                     </div>
                     <div>
-                        <div class="verification-title">Digital Twin — Recorded</div>
+                        <div class="verification-title">Digital Twin â€” Recorded</div>
                         <div class="verification-subtitle">Permanently documented</div>
                     </div>
                 </div>
@@ -1252,6 +1274,7 @@ body.fullscreen-active {
                     <img class="card-layer layer-east" id="fs-layer-east" alt="" src="" loading="eager">
                     <img class="card-layer layer-west" id="fs-layer-west" alt="" src="" loading="eager">
                     <canvas class="forensic-canvas" id="fs-forensic-canvas"></canvas>
+                    <div class="forensic-badge" id="fs-forensic-badge">SURFACE</div>
                 </div>
             </div>
         </div>
@@ -1535,6 +1558,7 @@ const Lumina = (function() {
         updateUI() {
             // Update main view
             const mainBtn = document.getElementById('texture-toggle-btn');
+            const mainBadge = document.getElementById('forensic-badge');
             
             if (mainBtn) {
                 mainBtn.classList.toggle('active', state.textureVisible);
@@ -1543,9 +1567,14 @@ const Lumina = (function() {
             if (this.mainCanvas) {
                 this.mainCanvas.classList.toggle('visible', state.textureVisible);
             }
+            if (mainBadge) {
+                mainBadge.style.opacity = state.textureVisible ? '1' : '0';
+                mainBadge.style.transform = state.textureVisible ? 'translateY(0)' : 'translateY(-4px)';
+            }
             
             // Update fullscreen view
             const fsBtn = document.getElementById('fs-texture-toggle-btn');
+            const fsBadge = document.getElementById('fs-forensic-badge');
             
             if (fsBtn) {
                 fsBtn.classList.toggle('active', state.textureVisible);
@@ -1553,6 +1582,10 @@ const Lumina = (function() {
             }
             if (this.fsCanvas) {
                 this.fsCanvas.classList.toggle('visible', state.textureVisible);
+            }
+            if (fsBadge) {
+                fsBadge.style.opacity = state.textureVisible ? '1' : '0';
+                fsBadge.style.transform = state.textureVisible ? 'translateY(0)' : 'translateY(-4px)';
             }
         },
 
@@ -1603,8 +1636,8 @@ const Lumina = (function() {
             const outputData = mainCtx.createImageData(width, height);
             
             // Photometric stereo: compute surface gradients from directional lighting
-            // dz/dx ≈ (East - West) / 2
-            // dz/dy ≈ (North - South) / 2  (note: image Y is inverted)
+            // dz/dx â‰ˆ (East - West) / 2
+            // dz/dy â‰ˆ (North - South) / 2  (note: image Y is inverted)
             
             for (let i = 0; i < northData.length; i += 4) {
                 // Get luminance from each direction

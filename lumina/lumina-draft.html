@@ -952,8 +952,6 @@ html, body {
 .texture-layer.visible ~ .forensic-scanlines {
     opacity: 1;
 }
-    opacity: 1;
-}
 
 .texture-toggle-btn {
     position: absolute;
@@ -972,17 +970,8 @@ html, body {
     gap: 8px;
     cursor: pointer;
     z-index: 35;
-    opacity: 0;
-    transition: opacity var(--transition-medium), background var(--transition-fast), border-color var(--transition-fast);
-}
-
-.card-wrapper:hover .texture-toggle-btn,
-.card-wrapper:focus-within .texture-toggle-btn {
     opacity: 1;
-}
-
-@media (hover: none) {
-    .texture-toggle-btn { opacity: 1; }
+    transition: opacity var(--transition-medium), background var(--transition-fast), border-color var(--transition-fast);
 }
 
 .texture-toggle-btn:hover,
@@ -1905,7 +1894,7 @@ const Lumina = (function() {
 
         /**
          * Compute the forensic texture map from directional images
-         * Uses photometric stereo: gradient â‰ˆ (light1 - light2)
+         * Uses photometric stereo: gradient Ã¢â€°Ë† (light1 - light2)
          */
         async computeFromImages(imageUrls) {
             if (this.isComputing) {
@@ -1914,7 +1903,7 @@ const Lumina = (function() {
             }
             this.isComputing = true;
             
-            console.log('ðŸ”¬ Starting forensic texture computation...');
+            console.log('Ã°Å¸â€Â¬ Starting forensic texture computation...');
             console.log('Image URLs:', imageUrls);
             
             try {
@@ -1927,7 +1916,7 @@ const Lumina = (function() {
                     this.loadImageData(imageUrls.base)
                 ]);
                 
-                console.log('âœ“ All images loaded:', northData.width, 'x', northData.height);
+                console.log('Ã¢Å“â€œ All images loaded:', northData.width, 'x', northData.height);
                 
                 this.width = northData.width;
                 this.height = northData.height;
@@ -1945,7 +1934,7 @@ const Lumina = (function() {
                 const base = baseData.data;
                 
                 // Compute gradients using photometric stereo principle
-                // Nx â‰ˆ (west - east), Ny â‰ˆ (north - south)
+                // Nx Ã¢â€°Ë† (west - east), Ny Ã¢â€°Ë† (north - south)
                 let maxGradX = 0, maxGradY = 0;
                 for (let i = 0; i < pixelCount; i++) {
                     const idx = i * 4;
@@ -1969,16 +1958,16 @@ const Lumina = (function() {
                     maxGradY = Math.max(maxGradY, Math.abs(this.gradientY[i]));
                 }
                 
-                console.log('âœ“ Gradients computed. Max X:', maxGradX.toFixed(3), 'Max Y:', maxGradY.toFixed(3));
+                console.log('Ã¢Å“â€œ Gradients computed. Max X:', maxGradX.toFixed(3), 'Max Y:', maxGradY.toFixed(3));
                 
                 state.forensicReady = true;
                 
                 // Render initial state
                 this.render(0, 0);
-                console.log('âœ“ Forensic texture ready!');
+                console.log('Ã¢Å“â€œ Forensic texture ready!');
                 
             } catch (e) {
-                console.error('âŒ Failed to compute forensic texture:', e);
+                console.error('Ã¢ÂÅ’ Failed to compute forensic texture:', e);
             } finally {
                 this.isComputing = false;
             }
@@ -2393,6 +2382,7 @@ const Lumina = (function() {
             // Update main view
             const mainBtn = document.getElementById('texture-toggle-btn');
             const mainTexture = document.getElementById('texture-layer');
+            const mainBadge = document.getElementById('forensic-badge');
             
             if (mainBtn) {
                 mainBtn.classList.toggle('active', state.textureVisible);
@@ -2401,10 +2391,15 @@ const Lumina = (function() {
             if (mainTexture) {
                 mainTexture.classList.toggle('visible', state.textureVisible);
             }
+            if (mainBadge) {
+                mainBadge.style.opacity = state.textureVisible ? '1' : '0';
+                mainBadge.style.transform = state.textureVisible ? 'translateY(0)' : 'translateY(-4px)';
+            }
             
             // Update fullscreen view
             const fsBtn = document.getElementById('fs-texture-toggle-btn');
             const fsTexture = document.getElementById('fs-texture-layer');
+            const fsBadge = document.getElementById('fs-forensic-badge');
             
             if (fsBtn) {
                 fsBtn.classList.toggle('active', state.textureVisible);
@@ -2412,6 +2407,10 @@ const Lumina = (function() {
             }
             if (fsTexture) {
                 fsTexture.classList.toggle('visible', state.textureVisible);
+            }
+            if (fsBadge) {
+                fsBadge.style.opacity = state.textureVisible ? '1' : '0';
+                fsBadge.style.transform = state.textureVisible ? 'translateY(0)' : 'translateY(-4px)';
             }
         }
     };
